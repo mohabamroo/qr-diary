@@ -1,60 +1,56 @@
-var express = require("express");
-var path = require("path");
-var http = require("http");
-var https = require('https');
-var fs = require('fs');
-var ejs = require("ejs");
-var publicPath = path.resolve(__dirname, "public");
-var cookieParser = require('cookie-parser');
-var bodyParser = require('body-parser');
-var exphbs = require('express-handlebars');
-var expressValidator = require('express-validator');
-var flash = require('connect-flash');
-var session = require('express-session');
-var passport = require('passport');
-var LocalStrategy = require('passport-local').Strategy;
-var userUploadsPath = path.resolve(__dirname, "user_uploads");
-var publicPath = path.join(__dirname, 'public');
-var mongo = require('mongodb');
-var mongoose = require('mongoose');
-mongoose.connect('mongodb://mohabamroo:ghostrider1@ds139262.mlab.com:39262/reis-monrach');
-// mongoose.connect('mongodb://localhost/communitydb');
-var db = mongoose.connection;
-var mailer = require('express-mailer');
-var app = express();
+express = require("express");
+path = require("path");
+http = require("http");
+https = require('https');
+fs = require('fs');
+ejs = require("ejs");
+publicPath = path.resolve(__dirname, "public");
+cookieParser = require('cookie-parser');
+bodyParser = require('body-parser');
+expressValidator = require('express-validator');
+session = require('express-session');
+passport = require('passport');
+LocalStrategy = require('passport-local').Strategy;
+userUploadsPath = path.resolve(__dirname, "user_uploads");
+publicPath = path.join(__dirname, 'public');
+mongo = require('mongodb');
+mongoose = require('mongoose');
+jwt = require('jsonwebtoken');
+randomstring = require("randomstring");
 
-var cfenv = require('cfenv');
-var mailer = require('express-mailer');
-var session = require('express-session');
+// database config
+mongoose.connect('mongodb://mohabamroo:ghostrider@ds131237.mlab.com:31237/qr-diary');
+db = mongoose.connection;
+
+mailer = require('express-mailer');
+app = express();
+
+cfenv = require('cfenv');
+mailer = require('express-mailer');
+session = require('express-session');
 
 mailer.extend(app, {
-  from: 'communityguc@gmail.com',
-  host: 'smtp.gmail.com', // hostname 
-  secureConnection: true, // use SSL 
-  port: 465, // port for secure SMTP 
-  transportMethod: 'SMTP', // default is SMTP. Accepts anything that nodemailer accepts 
-  auth: {
-    user: 'communityguc@gmail.com',
-    pass: 'Undergrad!'
-  }
+    from: 'amr.qr.code@gmail.com',
+    host: 'smtp.gmail.com', // hostname 
+    secureConnection: true, // use SSL 
+    port: 465, // port for secure SMTP 
+    transportMethod: 'SMTP', // default is SMTP. Accepts anything that nodemailer accepts 
+    auth: {
+        user: 'amr.qr.code@gmail.com',
+        pass: 'reismonrach'
+    }
 });
 
 module.exports = app;
 
-// json api routes
-var usersApi = require('./routes/api/users');
-var postApi = require('./routes/api/posts');
-var albumApi = require('./routes/api/albums');
-var tripApi = require('./routes/api/trips');
-
 app.set("views", path.resolve(__dirname, "views"));
-app.set("view engine", "ejs"); 
+app.set("view engine", "ejs");
 app.engine("html", ejs.renderFile);
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(bodyParser.json());
-app.use(bodyParser.json({limit: '5000mb'}));
-app.use(bodyParser.urlencoded({limit: '5000mb', extended: true}));
+app.use(bodyParser.json({ limit: '5000mb' }));
+app.use(bodyParser.urlencoded({ limit: '5000mb', extended: true }));
 app.use(cookieParser());
 
 app.use(express.static(publicPath));
@@ -73,51 +69,54 @@ app.use(passport.session());
 
 // Express Validator
 app.use(expressValidator({
-  errorFormatter: function(param, msg, value) {
-      var namespace = param.split('.')
-      , root    = namespace.shift()
-      , formParam = root;
-
-    while(namespace.length) {
-      formParam += '[' + namespace.shift() + ']';
+    errorFormatter: function(param, msg, value) {
+        var namespace = param.split('.'),
+            root = namespace.shift(),
+            formParam = root;
+        while (namespace.length) {
+            formParam += '[' + namespace.shift() + ']';
+        }
+        return {
+            param: formParam,
+            msg: msg,
+            value: value
+        };
     }
-    return {
-      param : formParam,
-      msg   : msg,
-      value : value
-    };
-  }
 }));
 
-app.use(flash());
 
 // Global Vars
-app.use(function (req, res, next) {
-  res.locals.success_msg = req.flash('success_msg');
-  res.locals.error_msg = req.flash('error_msg');
-  res.locals.error = req.flash('error');
-  res.locals.user = req.user || null;
-  res.locals.pagetitle = 'Home Page';
-  next();
+app.use(function(req, res, next) {
+    res.locals.user = req.user || null;
+    next();
 });
 
 // enable CROS
-app.all("/*", function (req, res, next) {
+app.all("/*", function(req, res, next) {
     res.header('Access-Control-Allow-Credentials', true);
-    res.header("Access-Control-Allow-Origin", "http://localhost:3000");
-    res.header("Access-Control-Allow-Methods", "GET, PUT, POST");
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "*");
     res.header("Access-Control-Allow-Headers", "Cache-Control, Pragma, Origin, Authorization, Content-Type, X-Requested-With, X-HTTP-Method-Override, Accept, X-Access-Token");
     return next();
 });
 
+// load models
+require('./models/user');
+
+// load controllers
+apiController = require('./controllers/apiController.js');
+usersController = require('./controllers/usersController.js');
+
+// json api routes
+var usersApi = require('./routes/api/users');
+
 // json api routes
 app.use('/api/users', usersApi);
-app.use('/api/posts', postApi);
-app.use('/api/albums', albumApi);
-app.use('/api/trips', tripApi);
 
-app.listen(process.env.PORT||3000, function() {
- console.log("Express app started on port 3000.");
+port = process.env.PORT || 3000;
+app.listen(port, function() {
+    console.log("Express app started on port: " + port + ".");
+    console.log("\nhttp://localhost:" + port + "\n")
 });
 
 // get the app environment from Cloud Foundry
