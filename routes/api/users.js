@@ -14,9 +14,17 @@ router.post('/signin', usersController.signin, function(req, res) {
     var token = jwt.sign({
         user: req.user
     }, 'ghostrider', { expiresIn: '1000h' });
+    req.user_f = {
+        name: req.user.name,
+        email: req.user.email,
+        country: req.user.country,
+        birthdate: req.user.birthdate,
+        _id: req.user._id
+    }
     res.status(200)
         .json({
             token: token,
+            user: req.user_f,
             msg: "Signed in successfully!"
         });
 
