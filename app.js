@@ -100,6 +100,19 @@ app.all("/*", function(req, res, next) {
     return next();
 });
 
+// before any request
+app.use(function(req, res, next) {
+    console.log("before any request");
+    var token = req.headers['app_token'];
+    if (token === 'ncY12VakiZ7vW1j') {
+        next();
+    } else {
+        res.status(403).json({
+            msg: "Unauthorized to communicate with our API."
+        });
+    }
+});
+
 // load models
 require('./models/user');
 

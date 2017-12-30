@@ -120,6 +120,129 @@ var validateUser = function(req, res, next) {
     });
 }
 
+var requireSocialAuth = function(req, res, next) {
+    req.checkBody('email', 'Email is empty!').notEmpty();
+    req.checkBody('name', 'Name is empty!').notEmpty();
+    req.checkBody('social_id', 'Social Auth ID is empty!').notEmpty();
+    req.checkBody('social_type', 'Choose facebook or google!').notEmpty();
+    next();
+}
+
+var saveSocialUser = function(req, res, next) {
+    var type = req.body.social_type;
+    var facebook_id = null;
+    var google_id = null;
+    switch (type) {
+        case "facebook":
+            facebook_id = req.body.social_id;
+            break;
+        case "google":
+            google_id = req.body.social_id;
+            break;
+    }
+    var new_user = new User({
+        name: req.body.name,
+        email: req.body.email,
+        facebook_id: facebook_id,
+        google_id: google_id
+    });
+    new_user.save(function(err, user) {
+        if (handle(err, req, res)) {
+            req.user = user;
+            console.log(user);
+            encodeUser(req, res, next);
+        }
+    })
+}
+
+var getSocialUser = function(req, res, next) {
+    var id = req.body.social_id;
+    if (!id) {
+        next();
+    }
+    var type = req.body.social_type;
+    var search_obj;
+    switch (type) {
+        case "facebook":
+            search_obj = { facebook_id: id };
+            break;
+        case "google":
+            search_obj = { google_id: id };
+            break;
+        default:
+            next();
+            break;
+    }
+    console.log(search_obj)
+    User.findOne(search_obj, function(err, user) {
+        if (handle(err, req, res)) {
+            if (user != null) {
+                req.user = user;
+                console.log("in get social")
+                encodeUser(req, res, next);
+            } else {
+                next();
+            }
+        } else {
+            next();
+        }
+    });
+}
+
+var encodeUser = function(req, res, next) {
+    var token = jwt.sign({
+        user: req.user
+    }, 'ghostrider', { expiresIn: '1000h' });
+    req.user_f = {
+        name: req.user.name,
+        email: req.user.email,
+        country: req.user.country,
+        birthdate: req.user.birthdate,
+        _id: req.user._id
+    };
+    req.token = token;
+    res.status(200)
+        .json({
+            token: req.token,
+            user: req.user_f,
+            msg: "Signed in successfully!"
+        });
+}
+
+var updateUserSocial = function(req, res, next) {
+    var options = { upsert: true, new: true, setDefaultsOnInsert: true };
+    User.findOneAndUpdate({ _id: req.user._id }, {
+        facebook_id: req.body.facebook_id || req.user.facebook_id,
+        google_id: req.body.google_id || req.user.google_id
+    }, options, function(err, user) {
+        if (handle(err, req, res)) {
+            req.user = user;
+            console.log("update social")
+            encodeUser(req, res, next);
+        }
+    });
+}
+
+var checkExistingUserByEmail = function(req, res, next) {
+    var email = req.body.email;
+    if (!email) {
+        next();
+    } else {
+        User.findOne({ email: email }, function(err, user) {
+            if (handle(err, req, res)) {
+                if (user) {
+                    req.user = user;
+                    console.log(user);
+                    console.log("found by email");
+                    updateUserSocial(req, res, next);
+                } else {
+                    next();
+                }
+            }
+        });
+    }
+}
+
 module.exports.signup = [
     requireSignup,
     validateErrors,
@@ -134,10 +257,19 @@ module.exports.signin = [
     requireSignin,
     validateErrors,
     getUserByEmail,
-    validateUser
+    validateUser,
+    encodeUser
 ]
 
 module.exports.profile = [
     ensureAuthenticatedApi,
     getUserByEmail
+]
+
+module.exports.social_login = [
+    checkExistingUserByEmail,
+    getSocialUser,
+    requireSocialAuth,
+    validateErrors,
+    saveSocialUser
 ]

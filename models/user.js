@@ -31,7 +31,13 @@ var userSchema = mongoose.Schema({
     type: {
         type: String,
         default: "normal"
-    }
+    },
+    google_id: {
+        type: String
+    },
+    facebook_id: {
+        type: String
+    },
 
 });
 
