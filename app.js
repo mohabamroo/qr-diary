@@ -104,6 +104,7 @@ app.all("/*", function(req, res, next) {
 app.use(function(req, res, next) {
     console.log("before any request");
     var token = req.headers['app_token'];
+    console.log(token);
     if (token === 'ncY12VakiZ7vW1j') {
         next();
     } else {
