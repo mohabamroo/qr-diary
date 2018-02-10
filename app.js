@@ -103,7 +103,7 @@ app.all("/*", function(req, res, next) {
 // before any request
 app.use(function(req, res, next) {
     console.log("before any request");
-    var token = req.headers['Authorization'];
+    var token = req.headers['authorization'];
     console.log(req.headers);
     console.log(req.headers['Authorization']);
     console.log(token);
