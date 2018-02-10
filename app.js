@@ -96,7 +96,7 @@ app.all("/*", function(req, res, next) {
     res.header('Access-Control-Allow-Credentials', true);
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "*");
-    res.header("Access-Control-Allow-Headers", "Cache-Control, Pragma, Origin, Authorization, Content-Type, X-Requested-With, X-HTTP-Method-Override, Accept, X-Access-Token");
+    res.header("Access-Control-Allow-Headers", "Cache-Control, Pragma, Origin, Authorization, Content-Type, X-Requested-With, X-HTTP-Method-Override, Accept, X-Access-Token", "app_token");
     return next();
 });
 
@@ -104,6 +104,11 @@ app.all("/*", function(req, res, next) {
 app.use(function(req, res, next) {
     console.log("before any request");
     var token = req.headers['app_token'];
+
+
+    console.log(req.headers);
+    console.log(req.headers['app_token']);
+
     console.log(token);
     if (token === 'ncY12VakiZ7vW1j') {
         next();
